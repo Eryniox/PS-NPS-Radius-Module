@@ -435,6 +435,7 @@ class NPSRadiusBuildArguments {
     [string] $Type
     [array]  $ConditionAttributes
     [array]  $ProfileAttributes
+    [bool]   $ReturnString = $true
 
     static [array] $BuildStart = @("nps", "set")
     # $BuildParams = @("nps", "set", "crp") # $BuildParams += @("name", "=", $Name)
@@ -451,7 +452,10 @@ class NPSRadiusBuildArguments {
         foreach ($CPRProfile in $this.ProfileAttributes) {
             $BuildParams += @("profileid", "=", ('"' + $CPRProfile.Id + '"'), "profiledata", "=", $CPRProfile.Value)
         }
-        Return ($BuildParams -join " ")
+        if ($this.ReturnString) {
+            Return ($BuildParams -join " ")
+        }
+        Return , $BuildParams
     }
 }
 
@@ -517,13 +521,17 @@ function Get-NPSRadiusBuildArguments {
         [Parameter(Mandatory=$true)]
         [array]  $ConditionAttributes,
         [Parameter(Mandatory=$true)]
-        [array]  $ProfileAttributes
+        [array]  $ProfileAttributes,
+        [switch] $ReturnArray
     )
     $NPSRadiusBuildArguments = [NPSRadiusBuildArguments]::new()
     $NPSRadiusBuildArguments.Name = $Name
     $NPSRadiusBuildArguments.Type = $Type
     $NPSRadiusBuildArguments.ConditionAttributes = $ConditionAttributes
     $NPSRadiusBuildArguments.ProfileAttributes = $ProfileAttributes
+    if ($ReturnArray) {
+        $NPSRadiusBuildArguments.ReturnString = $false
+    }
     Return ($NPSRadiusBuildArguments.GetArguments())
 }
 
