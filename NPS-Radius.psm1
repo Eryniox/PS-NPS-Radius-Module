@@ -435,13 +435,12 @@ class NPSRadiusBuildArguments {
     [string] $Type
     [array]  $ConditionAttributes
     [array]  $ProfileAttributes
-    [bool]   $ReturnString = $true
 
     static [array] $BuildStart = @("nps", "set")
     # $BuildParams = @("nps", "set", "crp") # $BuildParams += @("name", "=", $Name)
 
     #Methods
-    [string] GetArguments () {
+    hidden [array] GetArguments () {
         $BuildParams = [NPSRadiusBuildArguments]::BuildStart
         $BuildParams += $this.Type
         $NameCheck = '"' + ($this.Name -replace '^"|"$') + '"'
@@ -452,10 +451,13 @@ class NPSRadiusBuildArguments {
         foreach ($CPRProfile in $this.ProfileAttributes) {
             $BuildParams += @("profileid", "=", ('"' + $CPRProfile.Id + '"'), "profiledata", "=", $CPRProfile.Value)
         }
-        if ($this.ReturnString) {
-            Return ($BuildParams -join " ")
-        }
-        Return , $BuildParams
+        Return $BuildParams
+    }
+    [array] GetArgumentsArray () {
+        Return ($this.GetArguments())
+    }
+    [string] GetArgumentsString () {
+        Return ($this.GetArguments() -join " ")
     }
 }
 
@@ -530,9 +532,23 @@ function Get-NPSRadiusBuildArguments {
     $NPSRadiusBuildArguments.ConditionAttributes = $ConditionAttributes
     $NPSRadiusBuildArguments.ProfileAttributes = $ProfileAttributes
     if ($ReturnArray) {
-        $NPSRadiusBuildArguments.ReturnString = $false
+        $Result = $NPSRadiusBuildArguments.GetArgumentsArray()
+    } else {
+        $Result = $NPSRadiusBuildArguments.GetArgumentsString()
     }
-    Return ($NPSRadiusBuildArguments.GetArguments())
+    If ($Result -and $Result -is [System.Collections.IEnumerable] -and $Result -isnot [string] -and $Result.Count -eq 1) {
+        #[System.Collections.IEnumerable] works for both hashtables and arrays
+        #https://stackoverflow.com/questions/59616434/check-if-a-variable-is-a-string-list-array
+        Return ,$Result
+        #The comma in front of $Result effectively creates a new array with $Result as its only element. 
+        #PowerShell then un-rolls this new single-element array, returning the original $Result intact to the caller.
+        #https://stackoverflow.com/questions/59341745/force-powershell-function-to-return-array
+    } Else {
+        Return $Result
+        #using a comma to preserve Array is making ForEach-Object unusable. ForEach works just fine.
+        #returning an object with a comma only if it's a single element. 
+        #https://evotec.xyz/powershell-returning-one-object-from-function-as-an-array/
+    }
 }
 
 # Example usage:
